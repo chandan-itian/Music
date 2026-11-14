@@ -26,15 +26,17 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle'
+          distribution: 'microsoft'
+
+      - name: Clean Maven Settings
+        run: rm -f ~/.m2/settings.xml
 
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
 
       - name: Build Release APK
         run: |
-          ./gradlew :androidApp:assembleRelease --stacktrace
+          ./gradlew :androidApp:assembleRelease --stacktrace --no-configuration-cache
 
       - name: Prepare APK Outputs
         run: |
