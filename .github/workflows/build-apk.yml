@@ -26,15 +26,8 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'microsoft'
+          distribution: 'temurin'
           cache: 'gradle'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android Licenses
-        run: |
-          yes | sdkmanager --licenses || true
 
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
@@ -48,13 +41,17 @@ jobs:
           mkdir -p output_apks
           find androidApp/build/outputs/apk/release/ -name "*.apk" -exec cp {} output_apks/ \;
           cd output_apks
+          echo "Generated APK files:"
+          ls -lh
           UNIVERSAL_APK=$(ls *universal*.apk 2>/dev/null | head -n 1)
           if [ -n "$UNIVERSAL_APK" ]; then
             cp "$UNIVERSAL_APK" Music.apk
+            echo "Created Music.apk from $UNIVERSAL_APK"
           else
             FIRST_APK=$(ls *.apk 2>/dev/null | head -n 1)
             if [ -n "$FIRST_APK" ]; then
               cp "$FIRST_APK" Music.apk
+              echo "Created Music.apk from $FIRST_APK"
             fi
           fi
           ls -lh
