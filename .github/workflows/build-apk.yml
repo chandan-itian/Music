@@ -1,0 +1,83 @@
+name: Build Music APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'microsoft'
+          cache: 'gradle'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android Licenses
+        run: |
+          yes | sdkmanager --licenses || true
+
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release APK
+        run: |
+          ./gradlew :androidApp:assembleRelease --stacktrace
+
+      - name: Prepare APK Outputs
+        run: |
+          mkdir -p output_apks
+          find androidApp/build/outputs/apk/release/ -name "*.apk" -exec cp {} output_apks/ \;
+          cd output_apks
+          UNIVERSAL_APK=$(ls *universal*.apk 2>/dev/null | head -n 1)
+          if [ -n "$UNIVERSAL_APK" ]; then
+            cp "$UNIVERSAL_APK" Music.apk
+          else
+            FIRST_APK=$(ls *.apk 2>/dev/null | head -n 1)
+            if [ -n "$FIRST_APK" ]; then
+              cp "$FIRST_APK" Music.apk
+            fi
+          fi
+          ls -lh
+
+      - name: Upload APKs to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Music-APK-v2.5.0
+          path: output_apks/
+          retention-days: 30
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: v2.5.0
+          name: "Music v2.5.0"
+          body: |
+            ### Music v2.5.0
+            - **Author:** Chandan
+            - **Instagram:** [@chandan_krr_singh](https://www.instagram.com/chandan_krr_singh)
+            - **Application Name:** Music
+            - Pre-signed APK ready to install on Android devices.
+          files: output_apks/*.apk
+          token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
